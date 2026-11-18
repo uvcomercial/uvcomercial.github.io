@@ -657,10 +657,21 @@
       const correo = String(u.email || u.providerData?.[0]?.email || '').toLowerCase();
       if (!correo.endsWith('@' + MS_DOMINIO)) { await signOut(auth); msBtn(true); return msMsg('Usá tu cuenta de Urubó Village (@' + MS_DOMINIO + ').', true); }
       msBtn(false); msMsg('Entrando como ' + correo + '…');
-      let a = null; try { a = (await get(ref(db, 'acceso/' + correoClave(correo)))).val(); } catch (e) {}
-      if (!a || a.activo === false || !a.uid) { await signOut(auth); msBtn(true); return msMsg(correo + ' todavía no tiene acceso a la plataforma. Pedíselo al administrador.', true); }
-      window._fbAuth.usuario = { uid: a.uid, nombre: a.nombre || '', correo };
-      listo();
+      // Rapidez: si este navegador ya conoce el acceso de este correo, entra sin esperar a la base
+      // y lo confirma en segundo plano (si se lo quitaron, cierra la sesión al instante).
+      const LK = 'uv-acc-' + correoClave(correo);
+      let previo = null; try { previo = JSON.parse(localStorage.getItem(LK) || 'null'); } catch (e) {}
+      if (previo?.uid) { window._fbAuth.usuario = { uid: previo.uid, nombre: previo.nombre || '', correo }; listo(); }
+      let a = null, leido = false; try { a = (await get(ref(db, 'acceso/' + correoClave(correo)))).val(); leido = true; } catch (e) {}
+      if (leido && (!a || a.activo === false || !a.uid || (previo?.uid && previo.uid !== a.uid))) {
+        try { localStorage.removeItem(LK); } catch (e) {}
+        await signOut(auth);
+        if (_listo) { location.reload(); return; }
+        msBtn(true); return msMsg(correo + ' todavía no tiene acceso a la plataforma. Pedíselo al administrador.', true);
+      }
+      if (!a) { if (!_listo) { msBtn(true); msMsg('No se pudo verificar tu acceso. Revisá la conexión y probá de nuevo.', true); } return; }
+      try { localStorage.setItem(LK, JSON.stringify({ uid: a.uid, nombre: a.nombre || '' })); } catch (e) {}
+      if (!_listo) { window._fbAuth.usuario = { uid: a.uid, nombre: a.nombre || '', correo }; listo(); }
     });
   }
 </script>
@@ -5316,7 +5327,7 @@ body.cb-abierto #toast-container .toast:not(.error){ display:none; }
 </div><!-- /admin-panel -->
 
 
-<script src="script.js?v=202611182"></script>
+<script src="script.js?v=202611183"></script>
 <link rel="stylesheet" href="tema.css"/>
 </body>
 </html>
