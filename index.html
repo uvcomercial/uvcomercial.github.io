@@ -625,8 +625,8 @@
       msBtn(false); msMsg('Abriendo Microsoft…');
       try { await signInWithPopup(auth, p); }
       catch (e) {
-        if (/popup-blocked|operation-not-supported/.test(e.code || '')) { try { await signInWithRedirect(auth, p); return; } catch (e2) { e = e2; } }
         msBtn(true);
+        if (/popup-blocked/.test(e.code || '')) return msMsg('El navegador bloqueó la ventana de Microsoft. Permití las ventanas emergentes para esta página (ícono en la barra de direcciones) y tocá de nuevo.', true);
         msMsg(/popup-closed|cancelled-popup/.test(e.code || '') ? '' : 'No se pudo iniciar sesión con Microsoft (' + (e.code || e.message) + ').', true);
       }
     },
@@ -5316,7 +5316,7 @@ body.cb-abierto #toast-container .toast:not(.error){ display:none; }
 </div><!-- /admin-panel -->
 
 
-<script src="script.js?v=202611181"></script>
+<script src="script.js?v=202611182"></script>
 <link rel="stylesheet" href="tema.css"/>
 </body>
 </html>
