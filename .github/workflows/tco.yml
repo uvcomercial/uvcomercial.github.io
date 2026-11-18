@@ -3,9 +3,9 @@ name: TCO del BCB
 # Todos los días guarda en tco.json el tipo de cambio oficial que publica el Banco Central de Bolivia.
 on:
   schedule:
-    - cron: '20 12 * * *'   # 08:20 en Bolivia
-    - cron: '20 16 * * *'   # 12:20 en Bolivia (por si a la mañana no estaba publicado)
-    - cron: '20 21 * * *'   # 17:20 en Bolivia
+    - cron: '0 10 * * *'    # 06:00 en Bolivia
+    - cron: '0 0 * * *'     # 20:00 en Bolivia
+    - cron: '50 3 * * *'    # 23:50 en Bolivia
   workflow_dispatch:
   push:
     paths: ['scripts/tco-bcb.mjs', '.github/workflows/tco.yml']

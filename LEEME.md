@@ -38,5 +38,5 @@ Al modificar un archivo, cambiar su `?v=` en `index.html` para que los navegador
 ## TCO del BCB
 
 `tco.json` guarda el tipo de cambio oficial de cada día. Lo completa sola la tarea `.github/workflows/tco.yml`
-(lee https://www.bcb.gob.bo/bcb_tco_publico_ultima_cotizacion.php a las 08:20, 12:20 y 17:20 de Bolivia).
+(lee https://www.bcb.gob.bo/bcb_tco_publico_ultima_cotizacion.php a las 06:00, 20:00 y 23:50 de Bolivia).
 Nunca borra ni cambia un día ya guardado. Antes del 27/06/2026 rige el TC fijo de 6,96.
