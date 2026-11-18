@@ -30,5 +30,13 @@ Dirección: https://uvcomercial.github.io/
 | 20-embudo-crm | embudo, call center, padrón de clientes |
 | 21-rendimiento | dibuja solo el panel que se está viendo |
 | 22-parte-semanal | Inicio: parte semanal de Gerencia |
+| 23-tco | TCO del BCB: referencia arriba, histórico y materia reservada |
+| 24-recordatorios | recordatorios de cobranza con mensaje para WhatsApp y QR |
 
 Al modificar un archivo, cambiar su `?v=` en `index.html` para que los navegadores bajen la versión nueva.
+
+## TCO del BCB
+
+`tco.json` guarda el tipo de cambio oficial de cada día. Lo completa sola la tarea `.github/workflows/tco.yml`
+(lee https://www.bcb.gob.bo/bcb_tco_publico_ultima_cotizacion.php a las 08:20, 12:20 y 17:20 de Bolivia).
+Nunca borra ni cambia un día ya guardado. Antes del 27/06/2026 rige el TC fijo de 6,96.

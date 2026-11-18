@@ -1,0 +1,41 @@
+name: TCO del BCB
+
+# Todos los días guarda en tco.json el tipo de cambio oficial que publica el Banco Central de Bolivia.
+on:
+  schedule:
+    - cron: '20 12 * * *'   # 08:20 en Bolivia
+    - cron: '20 16 * * *'   # 12:20 en Bolivia (por si a la mañana no estaba publicado)
+    - cron: '20 21 * * *'   # 17:20 en Bolivia
+  workflow_dispatch:
+  push:
+    paths: ['scripts/tco-bcb.mjs', '.github/workflows/tco.yml']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tco
+  cancel-in-progress: false
+
+jobs:
+  tco:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Descargar la página del BCB
+        run: |
+          curl -sSL --retry 4 --retry-delay 20 --max-time 60 \
+            -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36" \
+            -o bcb.html "https://www.bcb.gob.bo/bcb_tco_publico_ultima_cotizacion.php"
+          ls -la bcb.html
+      - name: Agregar al histórico
+        run: node scripts/tco-bcb.mjs bcb.html
+      - name: Guardar
+        run: |
+          rm -f bcb.html
+          if git diff --quiet tco.json; then echo "Sin días nuevos"; exit 0; fi
+          git config user.name "TCO BCB (automático)"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tco.json
+          git commit -m "TCO BCB $(date -u +%Y-%m-%d)"
+          git push

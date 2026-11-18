@@ -1,0 +1,48 @@
+/* ── TCO del BCB (insignia arriba y ventana con el histórico) ── */
+.tco-badge{ display:inline-flex; align-items:baseline; gap:6px; margin-right:12px; padding:6px 10px; border:1px solid var(--t-line,#E3DBCB); border-radius:6px; background:var(--t-card,#FDFCF9); color:var(--t-ink,#1C1A17); font:600 12px 'Montserrat',Arial,sans-serif; cursor:pointer; white-space:nowrap; min-height:32px; }
+.tco-badge span{ font-size:10px; letter-spacing:.08em; color:var(--t-mute,#6B6355); }
+.tco-badge b{ font-size:13px; font-variant-numeric:tabular-nums; }
+.tco-badge:hover{ border-color:var(--t-gold,#8A6E3F); }
+.panel-header-right .tco-badge{ margin-right:6px; }
+@media (max-width:700px){ .tco-badge span{ display:none; } .tco-badge{ margin-right:6px; padding:5px 8px; } }
+.tco-modal{ display:none; position:fixed; inset:0; z-index:9000; background:rgba(28,26,23,.45); align-items:center; justify-content:center; padding:16px; }
+.tco-modal.open{ display:flex; }
+.tco-box{ width:min(640px,100%); max-height:88vh; overflow:auto; background:var(--t-card,#FDFCF9); color:var(--t-ink,#1C1A17); border-radius:10px; padding:18px 20px; box-shadow:0 20px 50px rgba(0,0,0,.25); font-family:'Montserrat',Arial,sans-serif; font-size:13px; }
+.tco-h{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:8px; }
+.tco-h b{ display:block; font-size:16px; }
+.tco-h span{ font-size:12px; color:var(--t-mute,#6B6355); }
+.tco-x{ border:0; background:none; font-size:24px; line-height:1; cursor:pointer; color:var(--t-mute,#6B6355); min-width:44px; min-height:44px; }
+.tco-svg{ width:100%; height:auto; display:block; margin:6px 0 10px; background:#F7F5F0; border-radius:6px; }
+.tco-cols{ display:grid; grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr)); gap:14px; }
+.tco-sh{ font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--t-mute,#6B6355); margin-bottom:4px; }
+.tco-tw{ max-height:300px; overflow:auto; border:1px solid var(--t-line,#E3DBCB); border-radius:6px; }
+.tco-tw table{ width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+.tco-tw th,.tco-tw td{ padding:5px 8px; text-align:right; border-bottom:1px solid #EFE9DC; }
+.tco-tw th:first-child,.tco-tw td:first-child{ text-align:left; }
+.tco-tw th{ position:sticky; top:0; background:#F1ECE2; font-size:11px; }
+.tco-pie{ margin-top:10px; font-size:12px; color:var(--t-mute,#6B6355); }
+.tco-pie button,.tco-mr-nota button{ border:0; background:none; padding:0; color:#6A5229; text-decoration:underline; cursor:pointer; font:inherit; }
+.tco-mr-nota{ margin-top:4px; font-size:12px; color:var(--t-mute,#6B6355); }
+
+/* ── Recordatorios de cobranza ── */
+.rc-box{ margin:0 0 12px; }
+.rc-vacio{ padding:8px 12px; border:1px dashed var(--t-line,#E3DBCB); border-radius:8px; font-size:12.5px; color:var(--t-mute,#6B6355); }
+.rc-h{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; padding:0 2px 6px; }
+.rc-h b{ font-size:14px; }
+.rc-h span{ font-size:12px; color:var(--t-mute,#6B6355); }
+.rc-l{ display:flex; flex-direction:column; border:1px solid var(--t-line,#E3DBCB); border-radius:8px; overflow:hidden; background:var(--t-card,#FDFCF9); }
+.rc-i{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; padding:8px 12px; border-top:1px solid #EFE9DC; }
+.rc-i:first-child{ border-top:0; }
+.rc-i.venc{ background:#FBEDE8; }
+.rc-i.ya{ background:#FBF4E4; }
+.rc-t{ flex:0 0 74px; display:flex; flex-direction:column; line-height:1.15; }
+.rc-t b{ font-size:15px; font-variant-numeric:tabular-nums; }
+.rc-t span{ font-size:11px; color:var(--t-mute,#6B6355); }
+.rc-i.venc .rc-t span{ color:#A33F27; font-weight:600; }
+.rc-c{ flex:1 1 260px; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.rc-a{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.rc-qr{ display:flex; gap:12px; align-items:center; margin:10px 0; padding:10px; border:1px solid var(--t-line,#E3DBCB); border-radius:8px; }
+.rc-qr img{ width:84px; height:auto; border-radius:4px; }
+.rc-qr > div{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; }
+.rc-qr b{ width:100%; }
+.rc-qr span{ width:100%; font-size:12px; color:var(--t-mute,#6B6355); }

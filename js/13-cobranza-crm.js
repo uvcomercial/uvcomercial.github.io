@@ -523,6 +523,7 @@ function cobRenderFicha(primeraVez) {
       <div class="cob-fi-grid" id="cob-g-comp" style="display:none;">
         <label>Tipo<select id="cob-g-ctipo">${opts(COB_TIPOS_COMP, 'Pago')}</select></label>
         <label>Fecha<input type="date" id="cob-g-cfecha" value="${_cobSumarDias(_cobHoy(), 7)}"/></label>
+        <label>Hora<input type="time" id="cob-g-chora" value="10:00" step="900"/></label>
         <label>Monto US$<input type="number" id="cob-g-cmonto" step="0.01" placeholder="0.00"/></label>
         <label>Aplica a<select id="cob-g-capl"><option>Terreno y acción</option><option>Terreno</option><option>Acción</option></select></label>
       </div>
@@ -614,7 +615,7 @@ async function cobGuardarGestion() {
   const conComp = document.getElementById('cob-g-conc')?.checked;
   let comp = null;
   if (conComp) {
-    comp = { tipo: val('cob-g-ctipo'), fecha: val('cob-g-cfecha'), monto: _cobNum(val('cob-g-cmonto')), aplica: val('cob-g-capl') };
+    comp = { tipo: val('cob-g-ctipo'), fecha: val('cob-g-cfecha'), hora: val('cob-g-chora'), monto: _cobNum(val('cob-g-cmonto')), aplica: val('cob-g-capl') };
     if (!comp.fecha) { toastErr('Elegí la fecha del compromiso.'); return; }
     if (comp.fecha < _cobHoy()) { toastErr('La fecha del compromiso no puede ser anterior a hoy.'); return; }
     if ((comp.tipo === 'Pago' || comp.tipo === 'Avance') && !comp.monto) { toastErr('Indicá el monto comprometido.'); return; }
@@ -628,7 +629,7 @@ async function cobGuardarGestion() {
     let compId = null;
     if (comp) {
       compId = await window._fbCob.push('cobcrm_compromisos', {
-        clienteKey: cobFichaKey, cliente: a.persona, tipo: comp.tipo, fecha: comp.fecha, monto: comp.monto || 0, aplica: comp.aplica,
+        clienteKey: cobFichaKey, cliente: a.persona, tipo: comp.tipo, fecha: comp.fecha, hora: comp.hora || '', monto: comp.monto || 0, aplica: comp.aplica,
         nota, estado: 'Pendiente', responsable: crmAnt.responsable || autor, creadoPor: autor, ts, deudaAlCrear: a.total, corte: cobCorteSel,
         terrenos: [...a.terrenos],
       });
@@ -642,7 +643,7 @@ async function cobGuardarGestion() {
     if (!crmAnt.responsable) upd.responsable = autor;
     await window._fbCob.update('cobcrm_clientes/' + cobFichaKey, upd);
     if (cobGestionesTodas) (cobGestionesTodas[cobFichaKey] ||= {})['local' + ts] = gest;
-    toastOk('Gestión registrada' + (comp ? ' y alerta programada para el ' + _cobF(comp.fecha) : '') + '.');
+    toastOk('Gestión registrada' + (comp ? ' y alerta programada para el ' + _cobF(comp.fecha) + (comp.hora ? ' a las ' + comp.hora : '') : '') + '.');
     cobRenderFicha(true);
   } catch(err) { console.error(err); toastErr('No se pudo guardar la gestión.'); }
 }
@@ -667,7 +668,7 @@ function _cobCompItemHTML(c, conCliente) {
   const cuando = !pend ? c.estado : dias < 0 ? `vencido hace ${-dias} d` : dias === 0 ? 'HOY' : `en ${dias} d`;
   const a = conCliente ? cobAgg.find(x => x.key === c.clienteKey) : null;
   return `<div class="cob-comp ${cls}">
-    <div class="cob-comp-f"><b>${_cobFc(c.fecha)}</b><span>${cuando}</span></div>
+    <div class="cob-comp-f"><b>${_cobFc(c.fecha)}</b>${c.hora ? `<b>${esc(c.hora)}</b>` : ''}<span>${cuando}</span></div>
     <div class="cob-comp-b">
       <div>${conCliente ? `<a class="cob-lnk" onclick="cobAbrirFicha('${c.clienteKey}')">${esc(c.cliente)}</a> · ` : ''}<b>${esc(c.tipo)}</b>${c.monto ? ' ' + _cobUSD2(c.monto) : ''}${c.aplica && c.aplica !== 'Terreno y acción' ? ' · ' + esc(c.aplica) : ''}
         ${conCliente ? `<span class="cob-mini"> · deuda actual ${a ? _cobUSD(a.total) : '<b style="color:var(--ok-ink)">ya no figura</b>'}</span>` : ''}</div>
@@ -677,6 +678,7 @@ function _cobCompItemHTML(c, conCliente) {
       ${det && !det.pago && det.fueraLista ? `<div class="cob-det">💚 El cliente ya no figura en el corte ${_cobCorteNom(cobCorteSel)} — probablemente pagó.</div>` : ''}
     </div>
     ${pend ? `<div class="cob-comp-a">
+      ${typeof rcAbrirMensaje === 'function' ? `<button class="cob-ab" onclick="rcAbrirMensaje('${c._id}')" title="Mensaje para WhatsApp">💬</button>` : ''}
       <button class="cob-ab ok" onclick="cobResolverComp('${c._id}','Cumplido')" title="Cumplido">✔</button>
       <button class="cob-ab d" onclick="cobResolverComp('${c._id}','Incumplido')" title="Incumplido">✖</button>
       <button class="cob-ab" onclick="cobReprogramarComp('${c._id}')" title="Reprogramar">📅</button>
@@ -731,23 +733,24 @@ function cobReprogramarComp(id) {
     <h3>📅 Reprogramar compromiso</h3>
     <p>${esc(c.cliente)} · ${esc(c.tipo)} · fecha actual ${_cobF(c.fecha)}</p>
     <label>Nueva fecha<input type="date" id="cob-m-fecha" min="${_cobHoy()}" value="${_cobSumarDias(_cobHoy() > c.fecha ? _cobHoy() : c.fecha, 7)}"/></label>
+    <label>Hora<input type="time" id="cob-m-hora" step="900" value="${esc(c.hora || '10:00')}"/></label>
     <label>Monto US$<input type="number" step="0.01" id="cob-m-monto" value="${c.monto || ''}"/></label>
     <label>Motivo<textarea id="cob-m-nota" rows="2" placeholder="Por qué se mueve la fecha"></textarea></label>
     <div class="cob-modal-acts"><button class="btn-secondary btn-sm" onclick="cobCerrarModal()">Volver</button><button class="btn-primary btn-sm" onclick="cobConfirmarReprogramacion('${id}')">Guardar</button></div>`);
 }
 async function cobConfirmarReprogramacion(id) {
   const c = cobCompromisos[id]; if (!c) return;
-  const fecha = document.getElementById('cob-m-fecha')?.value, monto = _cobNum(document.getElementById('cob-m-monto')?.value);
+  const fecha = document.getElementById('cob-m-fecha')?.value, monto = _cobNum(document.getElementById('cob-m-monto')?.value), hora = document.getElementById('cob-m-hora')?.value || '';
   const nota = (document.getElementById('cob-m-nota')?.value || '').trim();
   if (!fecha || fecha < _cobHoy()) { toastErr('Elegí una fecha desde hoy en adelante.'); return; }
   if (!nota) { toastErr('Indicá el motivo de la reprogramación.'); return; }
   const autor = _cobUsuario(), ts = Date.now();
   const reps = [...(c.reprogramaciones || []), { de: c.fecha, a: fecha, montoAnt: c.monto || 0, motivo: nota, por: autor, ts }];
   try {
-    await window._fbCob.update('cobcrm_compromisos/' + id, { fecha, monto, reprogramaciones: reps });
+    await window._fbCob.update('cobcrm_compromisos/' + id, { fecha, hora, monto, reprogramaciones: reps });
     await window._fbCob.push('cobcrm_gestiones/' + c.clienteKey, { ts, fecha: _cobHoy(), canal: 'Sistema', resultado: 'Compromiso reprogramado',
       nota: `${c.tipo}: ${_cobF(c.fecha)} → ${_cobF(fecha)}${monto !== c.monto ? ` · monto ${_cobUSD2(c.monto)} → ${_cobUSD2(monto)}` : ''} · ${nota}`, autor, deuda: cobAgg.find(x => x.key === c.clienteKey)?.total || 0, corte: cobCorteSel || '' });
-    cobCerrarModal(); toastOk('Compromiso reprogramado al ' + _cobF(fecha) + '.');
+    cobCerrarModal(); toastOk('Compromiso reprogramado al ' + _cobF(fecha) + (hora ? ' a las ' + hora : '') + '.');
   } catch(err) { console.error(err); toastErr('No se pudo reprogramar.'); }
 }
 
