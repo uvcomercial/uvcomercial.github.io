@@ -1,0 +1,44 @@
+/* ── Seguridad y sesiones ── */
+#login-screen.uv-restaurando .login-card > *{ visibility:hidden; }
+#login-screen.uv-restaurando .login-card{ position:relative; }
+#login-screen.uv-restaurando .login-card::after{ content:'Abriendo tu sesión…'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:15px; color:var(--t-mute,#6B6355); letter-spacing:.02em; }
+#step-usuario.seg-con-recientes:not(.seg-ver-todos) > :not(#seg-recientes){ display:none !important; }
+#step-usuario.seg-con-recientes.seg-ver-todos .seg-otro{ display:none; }
+#seg-recientes{ margin-bottom:6px; }
+#seg-recientes .asesor-btn{ border-top:1px solid var(--t-line,#E3DBCB); }
+#seg-recientes .asesor-btn + .asesor-btn{ border-top:none; }
+.seg-rec{ position:relative; }
+.seg-rec::after{ display:none !important; }
+.seg-rec-x{ margin-left:auto; width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--t-faint,#9A8F76); font-size:16px; opacity:0; transition:opacity .15s; }
+.seg-rec:hover .seg-rec-x{ opacity:1; }
+.seg-rec-x:hover{ background:var(--t-panel,#F1ECE2); color:var(--t-ink,#1C1A17); }
+.seg-otro{ display:block; width:100%; margin-top:14px; padding:11px; background:transparent; border:1px solid var(--t-line-2,#CFC6B0); border-radius:6px; font-weight:600; font-size:13px; color:var(--t-ink,#1C1A17); cursor:pointer; }
+.seg-otro:hover{ background:var(--t-panel,#F1ECE2); }
+label.seg-chk{ display:flex !important; align-items:center; justify-content:center; gap:8px; margin:18px 0 2px; text-transform:none !important; letter-spacing:0 !important; font-size:12.5px !important; font-weight:500 !important; color:var(--t-ink-2,#3F392F) !important; cursor:pointer; }
+label.seg-chk input{ width:16px; height:16px; accent-color:var(--t-ink,#1C1A17); }
+.seg-chk-hint{ text-align:center; font-size:11px; color:var(--t-faint,#9A8F76); }
+.pin-err{ line-height:1.45; }
+/* Pantalla bloqueada */
+#seg-lock{ position:fixed; inset:0; z-index:200000; display:none; align-items:center; justify-content:center; background:rgba(28,26,23,.72); backdrop-filter:blur(14px) saturate(80%); }
+#seg-lock.open{ display:flex; }
+.seg-lock-box{ width:min(360px,90vw); background:var(--t-card,#FDFCF9); border:1px solid var(--t-line,#E3DBCB); border-radius:12px; padding:30px 28px 22px; text-align:center; box-shadow:0 30px 80px -20px rgba(0,0,0,.5); }
+.seg-lock-av{ width:56px; height:56px; border-radius:50%; margin:0 auto 12px; display:flex; align-items:center; justify-content:center; background:var(--t-ink,#1C1A17); color:var(--t-sand,#D8C9A3); font-weight:700; font-size:18px; }
+.seg-lock-n{ font-size:18px; font-weight:600; color:var(--t-ink,#1C1A17); }
+.seg-lock-s{ font-size:12.5px; color:var(--t-mute,#6B6355); margin:6px 0 18px; line-height:1.5; }
+#seg-lock-pin{ width:160px !important; margin:0 auto; display:block; text-align:center; font-size:26px !important; letter-spacing:.5em; padding:10px 0 10px .5em !important; }
+.seg-lock-err{ min-height:18px; font-size:12px; color:var(--danger-ink,#8A3F31); margin-top:10px; }
+.seg-lock-salir{ margin-top:12px; background:none; border:none; color:var(--t-mute,#6B6355); font-size:12px; text-decoration:underline; cursor:pointer; }
+/* Administración */
+.seg-cfg{ display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end; margin-bottom:12px; }
+.seg-cfg label{ display:flex; flex-direction:column; gap:5px; margin:0; }
+.seg-cfg select{ width:auto !important; min-width:170px; }
+.seg-nota{ font-size:12px; padding:8px 12px; border-radius:6px; background:var(--warn-bg,#F4EAD0); color:var(--warn-ink,#7A5E22); margin-bottom:14px; }
+.seg-nota.ok{ background:var(--ok-bg,#E8ECDD); color:var(--ok-ink,#46592F); }
+.seg-h{ font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; font-weight:600; color:var(--t-ink-2,#3F392F); margin:18px 0 8px; }
+.seg-tag{ font-size:9.5px; background:var(--t-panel,#F1ECE2); color:var(--t-gold,#8A6E3F); padding:0 6px; border-radius:3px; font-weight:600; }
+tr.seg-fallo td{ background:var(--danger-bg,#F4E2DB) !important; }
+.su-lock{ margin-left:auto; background:none; border:none; color:rgba(242,238,225,.45); cursor:pointer; padding:4px; border-radius:4px; display:flex; }
+.su-lock:hover{ color:#F2EEE1; background:rgba(242,238,225,.08); }
+.su-lock svg{ width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.su-lock + .su-exit{ margin-left:0; }
+body.uv-rail .su-lock{ display:none; }

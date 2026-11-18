@@ -1,0 +1,13 @@
+#ms-login{ display:none; flex-direction:column; align-items:stretch; gap:8px; margin:6px 0 4px; }
+body.auth-pend #ms-login{ display:flex; }
+body.auth-pend #step-usuario, body.auth-pend #pin-step, body.auth-pend .uv-hola-sub{ display:none !important; }
+.ms-btn{ display:flex; align-items:center; justify-content:center; gap:12px; min-height:48px; padding:0 18px; background:var(--t-ink,#1C1A17); color:var(--t-paper,#F7F5F0); border:1px solid var(--t-ink,#1C1A17); border-radius:6px; font:600 14px 'Montserrat',Arial,sans-serif; cursor:pointer; }
+.ms-btn:hover{ background:#3F392F; }
+.ms-btn:disabled{ opacity:.55; cursor:default; }
+.ms-hint{ margin:0; text-align:center; font-size:12px; color:var(--t-mute,#6B6355); }
+.ms-msg{ margin:0; min-height:18px; text-align:center; font-size:12.5px; color:var(--t-ink-2,#3F392F); }
+.ms-msg.err{ color:var(--danger-ink,#8A3F31); }
+.ms-pin-tmp{ margin-top:10px; background:none; border:none; color:var(--t-mute,#6B6355); font-size:12px; text-decoration:underline; cursor:pointer; }
+.ms-acc-form{ display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin:6px 0 10px; }
+.ms-acc-form label{ display:flex; flex-direction:column; gap:5px; margin:0; }
+.ms-acc-form input{ min-width:240px; }
