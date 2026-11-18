@@ -14907,8 +14907,9 @@ async function segIntentarRestaurar() {
   if (segRestauracionHecha) return;
   if (!_asesoresRecibidos || !segAdminCargado) return;
   segRestauracionHecha = true;
-  const loc = _segLeerLocal();
   const ls = document.getElementById('login-screen');
+  if (window._fbAuth?.usuario) return segEntrarMicrosoft(ls);
+  const loc = _segLeerLocal();
   if (!loc?.token) { ls?.classList.remove('uv-restaurando'); return; }
   try {
     const id = await _segSha256(loc.token);
@@ -14950,9 +14951,68 @@ async function segCerrarSesionActual(todas) {
   _segBorrarLocal();
 }
 
+/* ── Ingreso con la cuenta de Microsoft (correo @urubovillage.com) ──
+   El usuario ya viene identificado por Firebase; acá se elige su perfil y se registra la sesión
+   (así sigue apareciendo en Sesiones activas y el administrador la puede cerrar). */
+async function segEntrarMicrosoft(ls) {
+  const u = window._fbAuth.usuario;
+  const fuera = async msg => { _segBorrarLocal(); await window._fbAuth.salir(); toastErr(msg); setTimeout(() => location.reload(), 2500); };
+  if (u.uid !== 'admin') { const a = asesores.find(x => x._key === u.uid); if (!a || a.activo === false) return fuera('Tu usuario está desactivado en la plataforma. Hablá con el administrador.'); }
+  const loc = _segLeerLocal(), ahora = Date.now();
+  let reusar = false;
+  if (loc?.token && loc.uid === u.uid) {
+    try {
+      const id = await _segSha256(loc.token), ses = await window._fbSeg.get('sesiones/' + id), desde = await window._fbSeg.get('seguridad/config/sesionesValidasDesde');
+      if (ses && (ses.revocada || (desde && ses.creado < desde))) return fuera('Tu sesión fue cerrada por el administrador. Volvé a ingresar con Microsoft.');
+      if (ses && ses.expira > ahora) { segSesionId = id; segRecordar = true; reusar = true; window._fbSeg.update('sesiones/' + id, { ultimoUso: ahora, expira: Math.min(ahora + (segConfig.diasSesion || 30) * 864e5, ses.creado + 90 * 864e5), dispositivo: segDispositivo() }); }
+    } catch (e) {}
+  }
+  const nombre = u.uid === 'admin' ? 'Administrador' : (asesores.find(x => x._key === u.uid)?.nombre || u.nombre);
+  if (!reusar) { segRecordar = true; await segCrearSesion(u.uid, nombre); try { await window._fbSeg.update('sesiones/' + segSesionId, { correo: u.correo, metodo: 'microsoft' }); } catch (e) {} _segLog(u.uid, nombre, 'ingreso con Microsoft'); }
+  if (u.uid === 'admin') { asesorActual = null; modoAdmin = true; entrarAdmin(); }
+  else { asesorActual = asesores.find(x => x._key === u.uid); modoAdmin = false; entrarAsesor(); }
+  ls?.classList.remove('uv-restaurando');
+  segIniciarVigilancia();
+}
+
+/* Accesos con Microsoft: qué correo entra como qué usuario (solo administrador) */
+let segAccesoData = null;
+function segAccesoIniciar() {
+  if (window._segAccIni || !modoAdmin || !window._fbAcceso) return; window._segAccIni = true;
+  window._fbAcceso.listen(m => { segAccesoData = m; segRenderAdmin(); });
+}
+function _segAccNombre(uid) { return uid === 'admin' ? 'Administrador' : (asesores.find(a => a._key === uid)?.nombre || '(usuario borrado)'); }
+async function segAccesoGuardar() {
+  const correo = (document.getElementById('ms-acc-correo')?.value || '').trim().toLowerCase(), uid = document.getElementById('ms-acc-uid')?.value;
+  if (!/^[^@\s]+@urubovillage\.com$/.test(correo)) return toastErr('Escribí un correo @urubovillage.com.');
+  if (!uid) return toastErr('Elegí el usuario de la plataforma.');
+  try { await window._fbAcceso.set(correo, { uid, nombre: _segAccNombre(uid), correo, activo: true, ts: Date.now() }); toastOk(correo + ' ya puede entrar como ' + _segAccNombre(uid) + '.'); document.getElementById('ms-acc-correo').value = ''; }
+  catch (e) { toastErr('No se pudo guardar: ' + e.message); }
+}
+async function segAccesoQuitar(correo) {
+  const ok = await confirmDialog(correo + ' no va a poder entrar más a la plataforma.', { title: 'Quitar acceso', okText: 'Quitar acceso' });
+  if (!ok) return;
+  try { await window._fbAcceso.quitar(correo); toastOk('Acceso quitado.'); } catch (e) { toastErr('No se pudo quitar: ' + e.message); }
+}
+function _segAccHtml() {
+  if (!window._fbAcceso) return '';
+  const filas = Object.values(segAccesoData || {}).sort((a, b) => String(a.correo).localeCompare(b.correo));
+  const vinculados = new Set(filas.map(f => f.uid));
+  const sinCorreo = asesores.filter(a => a.activo !== false && !vinculados.has(a._key)).map(a => a.nombre);
+  const ultimo = {}; Object.values(segSesionesData || {}).forEach(s => { if (s.metodo === 'microsoft' && s.correo && (!ultimo[s.correo] || s.ultimoUso > ultimo[s.correo])) ultimo[s.correo] = s.ultimoUso; });
+  const opts = `<option value="">Usuario de la plataforma…</option><option value="admin">Administrador</option>` + asesores.filter(a => a.activo !== false).map(a => `<option value="${esc(a._key)}">${esc(a.nombre)} · ${esc(a.rol || '')}</option>`).join('');
+  return `<h4 class="seg-h">Ingreso con Microsoft (${filas.length} correos)</h4>
+    ${window._fbAuth?.pinTemporal ? `<div class="seg-nota">Período de transición: todavía se puede entrar con PIN. Cuando todos hayan entrado una vez con Microsoft, se cierra la base y el PIN deja de funcionar.${sinCorreo.length ? ' Usuarios activos sin correo vinculado: <b>' + sinCorreo.map(esc).join(', ') + '</b>.' : ''}</div>` : ''}
+    <div class="ms-acc-form"><label>Correo<input id="ms-acc-correo" type="email" placeholder="nombre@urubovillage.com" autocomplete="off"></label><label>Entra como<select id="ms-acc-uid">${opts}</select></label><button class="btn-primary btn-sm" onclick="segAccesoGuardar()">Dar acceso</button></div>
+    <div class="tabla-wrap"><table class="tabla-compacta"><thead><tr><th>Correo</th><th>Entra como</th><th>Último ingreso con Microsoft</th><th></th></tr></thead><tbody>
+      ${segAccesoData === null ? '<tr><td colspan="4">Cargando…</td></tr>' : filas.length ? filas.map(f => `<tr><td><b>${esc(f.correo)}</b></td><td>${esc(_segAccNombre(f.uid))}</td><td>${ultimo[f.correo] ? _segF(ultimo[f.correo]) : '<span style="color:var(--t-faint,#9A8F76)">todavía no entró</span>'}</td><td><button class="btn-secondary btn-sm" onclick="segAccesoQuitar('${esc(f.correo)}')">Quitar</button></td></tr>`).join('') : '<tr><td colspan="4">Ningún correo vinculado.</td></tr>'}
+    </tbody></table></div>`;
+}
+
 /* Salir: cierra la sesión de verdad (no solo recarga) */
 async function cerrarSesion() {
   await segCerrarSesionActual(false);
+  if (window._fbAuth?.usuario) await window._fbAuth.salir();
   location.reload();
 }
 async function confirmarSalir() {
@@ -15002,7 +15062,7 @@ function segIniciarVigilancia() {
       if (_segUid() === 'admin') segAdminSeguro = await window._fbSeg.get('config/adminPinSeguro');
       const s = await window._fbSeg.get('sesiones/' + segSesionId);
       const desde = await window._fbSeg.get('seguridad/config/sesionesValidasDesde');
-      if (!s || s.revocada || s.expira < Date.now() || (desde && s.creado < desde) || !_segUsuarioValido(s)) { _segBorrarLocal(); alert('Tu sesión fue cerrada (vencida o cerrada por el administrador). Volvé a ingresar con tu PIN.'); location.reload(); }
+      if (!s || s.revocada || s.expira < Date.now() || (desde && s.creado < desde) || !_segUsuarioValido(s)) { _segBorrarLocal(); if (window._fbAuth?.usuario) await window._fbAuth.salir(); alert('Tu sesión fue cerrada (vencida o cerrada por el administrador). Volvé a ingresar con tu PIN.'); location.reload(); }
     } catch (e) {}
   }, 120000);
   // salir en otra pestaña → esta también
@@ -15015,6 +15075,17 @@ function segBloquear() {
   let o = document.getElementById('seg-lock');
   if (!o) { o = document.createElement('div'); o.id = 'seg-lock'; document.body.appendChild(o); }
   const nombre = _segNombre();
+  if (window._fbAuth?.usuario) {
+    o.innerHTML = `<div class="seg-lock-box">
+      <div class="seg-lock-av">${esc(modoAdmin ? 'A' : iniciales(nombre))}</div>
+      <div class="seg-lock-n">${esc(nombre)}</div>
+      <div class="seg-lock-s">Pantalla bloqueada${Number(segConfig.bloqueoMin) ? ' por ' + segConfig.bloqueoMin + ' min sin actividad' : ''}. Confirmá tu cuenta de Microsoft para seguir donde estabas.</div>
+      <button class="ms-btn" style="width:100%" onclick="segDesbloquearMs()">Continuar con Microsoft</button>
+      <div id="seg-lock-err" class="seg-lock-err"></div>
+      <button class="seg-lock-salir" onclick="cerrarSesion()">No soy ${esc(nombre.split(' ')[0])} · cerrar sesión</button>
+    </div>`;
+    o.classList.add('open'); return;
+  }
   o.innerHTML = `<div class="seg-lock-box">
     <div class="seg-lock-av">${esc(modoAdmin ? 'A' : iniciales(nombre))}</div>
     <div class="seg-lock-n">${esc(nombre)}</div>
@@ -15025,6 +15096,14 @@ function segBloquear() {
   </div>`;
   o.classList.add('open');
   setTimeout(() => document.getElementById('seg-lock-pin')?.focus(), 60);
+}
+async function segDesbloquearMs() {
+  const err = document.getElementById('seg-lock-err');
+  try {
+    const correo = await window._fbAuth.reautenticar();
+    if (correo !== window._fbAuth.usuario.correo) { if (err) err.textContent = 'Esa no es la cuenta de esta sesión (' + window._fbAuth.usuario.correo + ').'; return; }
+    segBloqueada = false; segUltimaActividad = Date.now(); document.getElementById('seg-lock')?.classList.remove('open');
+  } catch (e) { if (err) err.textContent = /popup-closed|cancelled/.test(e.code || '') ? '' : 'No se pudo confirmar la cuenta (' + (e.code || e.message) + ').'; }
 }
 async function segDesbloquear() {
   const inp = document.getElementById('seg-lock-pin'), err = document.getElementById('seg-lock-err');
@@ -15063,7 +15142,8 @@ function segRenderAdmin() {
   const bloq = Object.entries(segBloqueosData).filter(([, b]) => b.hasta && b.hasta > ahora);
   const acc = Object.values(segAccesosData).sort((a, b) => b.ts - a.ts).slice(0, 60);
   const sinHash = asesores.filter(a => !a.pinHash).length + (segAdminSeguro?.hash ? 0 : 1);
-  box.innerHTML = `
+  segAccesoIniciar();
+  box.innerHTML = _segAccHtml() + `
     <div class="seg-cfg">
       <label>Mantener sesión iniciada
         <select onchange="segGuardarConfig('diasSesion', Number(this.value))">${[1,7,15,30,60,90].map(d => `<option value="${d}" ${segConfig.diasSesion == d ? 'selected' : ''}>${d} día${d > 1 ? 's' : ''}</option>`).join('')}</select></label>

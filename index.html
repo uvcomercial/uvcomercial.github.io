@@ -26,6 +26,8 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getDatabase, ref, push, onValue, remove, set, get, update, query, limitToLast, runTransaction }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getAuth, OAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
   /* ── MISMA FIREBASE QUE VISITAS ── */
   const firebaseConfig = {
@@ -603,8 +605,64 @@
   window._fbSetExpPeriodo = (idKey, data) =>
     set(ref(db, `expensas_admin/${idKey}`), { ...data, ts: Date.now() });
 
-  window._fbReady = true;
-  document.dispatchEvent(new Event('fb-ready'));
+  /* ── INGRESO CON MICROSOFT (correo corporativo @urubovillage.com) ──
+     La base solo responde a quien inició sesión con su cuenta de la empresa y figura en acceso/.
+     acceso/{correo con "." → ","} = { uid: 'admin' | clave en asesores_planilla, nombre, activo } */
+  const MS_DOMINIO = 'urubovillage.com';
+  const PIN_TEMPORAL = true;     // transición: deja entrar con PIN mientras todos vinculan su correo. Se apaga al cerrar la base.
+  const auth = getAuth(app);
+  const correoClave = e => String(e || '').trim().toLowerCase().replace(/\./g, ',');
+  let _listo = false;
+  const listo = () => { if (_listo) return; _listo = true; document.body.classList.remove('auth-pend'); window._fbReady = true; document.dispatchEvent(new Event('fb-ready')); };
+  const msMsg = (t, err) => { const m = document.getElementById('ms-msg'); if (m) { m.textContent = t || ''; m.className = 'ms-msg' + (err ? ' err' : ''); } };
+  const msBtn = on => { const b = document.getElementById('ms-btn'); if (b) b.disabled = !on; };
+  window._fbAuth = {
+    pinTemporal: PIN_TEMPORAL,
+    usuario: null,
+    async ingresar() {
+      const p = new OAuthProvider('microsoft.com');
+      p.setCustomParameters({ tenant: MS_DOMINIO, prompt: 'select_account', domain_hint: MS_DOMINIO });
+      msBtn(false); msMsg('Abriendo Microsoft…');
+      try { await signInWithPopup(auth, p); }
+      catch (e) {
+        if (/popup-blocked|operation-not-supported/.test(e.code || '')) { try { await signInWithRedirect(auth, p); return; } catch (e2) { e = e2; } }
+        msBtn(true);
+        msMsg(/popup-closed|cancelled-popup/.test(e.code || '') ? '' : 'No se pudo iniciar sesión con Microsoft (' + (e.code || e.message) + ').', true);
+      }
+    },
+    async salir() { try { await signOut(auth); } catch (e) {} },
+    async reautenticar() {   // desbloquear la pantalla: vuelve a pedir la cuenta de Microsoft
+      const p = new OAuthProvider('microsoft.com');
+      p.setCustomParameters({ tenant: MS_DOMINIO, prompt: 'select_account', domain_hint: MS_DOMINIO });
+      const r = await signInWithPopup(auth, p);
+      return String(r.user?.email || r.user?.providerData?.[0]?.email || '').toLowerCase();
+    },
+    token: () => auth.currentUser ? auth.currentUser.getIdToken() : Promise.resolve(null),
+    conPin() { if (!PIN_TEMPORAL) return; window._fbAuth.usuario = null; listo(); },
+    clave: correoClave,
+  };
+  window._fbAcceso = {
+    listen: cb => onValue(ref(db, 'acceso'), s => cb(s.val() || {}), () => cb(null)),
+    set: (correo, d) => set(ref(db, 'acceso/' + correoClave(correo)), d),
+    quitar: correo => remove(ref(db, 'acceso/' + correoClave(correo))),
+  };
+
+  if (new URLSearchParams(location.search).get('cotizacion')) listo();   // cliente viendo su cotización: sin login
+  else {
+    document.body.classList.add('auth-pend');
+    getRedirectResult(auth).catch(e => msMsg('No se pudo iniciar sesión con Microsoft (' + (e.code || e.message) + ').', true));
+    onAuthStateChanged(auth, async u => {
+      if (_listo) return;
+      if (!u) { msBtn(true); msMsg(''); return; }
+      const correo = String(u.email || u.providerData?.[0]?.email || '').toLowerCase();
+      if (!correo.endsWith('@' + MS_DOMINIO)) { await signOut(auth); msBtn(true); return msMsg('Usá tu cuenta de Urubó Village (@' + MS_DOMINIO + ').', true); }
+      msBtn(false); msMsg('Entrando como ' + correo + '…');
+      let a = null; try { a = (await get(ref(db, 'acceso/' + correoClave(correo)))).val(); } catch (e) {}
+      if (!a || a.activo === false || !a.uid) { await signOut(auth); msBtn(true); return msMsg(correo + ' todavía no tiene acceso a la plataforma. Pedíselo al administrador.', true); }
+      window._fbAuth.usuario = { uid: a.uid, nombre: a.nombre || '', correo };
+      listo();
+    });
+  }
 </script>
 
 <!-- SheetJS para importar Excel -->
@@ -793,6 +851,21 @@ html[data-theme="dark"] .mkp-mod .mkp-in{ background:#3D2A0A; }
 .mkp-det{ font-size:var(--fs-xs); margin:-4px 0 10px; color:var(--ink-700); }
 .mkp-det summary{ cursor:pointer; font-weight:700; color:var(--warn-ink); }
 .mkp-det ul{ margin:6px 0 0; padding-left:18px; line-height:1.5; }
+</style>
+<style id="ms-css">
+#ms-login{ display:none; flex-direction:column; align-items:stretch; gap:8px; margin:6px 0 4px; }
+body.auth-pend #ms-login{ display:flex; }
+body.auth-pend #step-usuario, body.auth-pend #pin-step, body.auth-pend .uv-hola-sub{ display:none !important; }
+.ms-btn{ display:flex; align-items:center; justify-content:center; gap:12px; min-height:48px; padding:0 18px; background:var(--t-ink,#1C1A17); color:var(--t-paper,#F7F5F0); border:1px solid var(--t-ink,#1C1A17); border-radius:6px; font:600 14px 'Montserrat',Arial,sans-serif; cursor:pointer; }
+.ms-btn:hover{ background:#3F392F; }
+.ms-btn:disabled{ opacity:.55; cursor:default; }
+.ms-hint{ margin:0; text-align:center; font-size:12px; color:var(--t-mute,#6B6355); }
+.ms-msg{ margin:0; min-height:18px; text-align:center; font-size:12.5px; color:var(--t-ink-2,#3F392F); }
+.ms-msg.err{ color:var(--danger-ink,#8A3F31); }
+.ms-pin-tmp{ margin-top:10px; background:none; border:none; color:var(--t-mute,#6B6355); font-size:12px; text-decoration:underline; cursor:pointer; }
+.ms-acc-form{ display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin:6px 0 10px; }
+.ms-acc-form label{ display:flex; flex-direction:column; gap:5px; margin:0; }
+.ms-acc-form input{ min-width:240px; }
 </style>
 <style id="seg-css">/* ── Seguridad y sesiones ── */
 #login-screen.uv-restaurando .login-card > *{ visibility:hidden; }
@@ -1938,6 +2011,17 @@ body.cb-abierto #toast-container .toast:not(.error){ display:none; }
       <p>Plataforma Comercial</p>
       <div class="uv-hola" id="uv-hola">Hola</div>
       <div class="uv-hola-sub">Elegí tu usuario para entrar</div>
+    </div>
+
+    <!-- Ingreso con la cuenta de Microsoft de la empresa -->
+    <div id="ms-login">
+      <button type="button" id="ms-btn" class="ms-btn" onclick="window._fbAuth && window._fbAuth.ingresar()" disabled>
+        <svg viewBox="0 0 21 21" width="18" height="18" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>
+        Ingresar con Microsoft
+      </button>
+      <p class="ms-hint">Usá tu correo de Urubó Village.</p>
+      <p id="ms-msg" class="ms-msg"></p>
+      <button type="button" id="ms-pin-tmp" class="ms-pin-tmp" onclick="window._fbAuth && window._fbAuth.conPin()">Entrar con PIN (solo por unos días)</button>
     </div>
 
     <!-- Paso 1: Seleccionar usuario -->
@@ -5232,7 +5316,7 @@ body.cb-abierto #toast-container .toast:not(.error){ display:none; }
 </div><!-- /admin-panel -->
 
 
-<script src="script.js?v=202611161"></script>
+<script src="script.js?v=202611181"></script>
 <link rel="stylesheet" href="tema.css"/>
 </body>
 </html>
