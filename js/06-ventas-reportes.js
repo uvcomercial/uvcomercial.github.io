@@ -171,7 +171,7 @@ function renderDetalleCierres() {
           ? '<span class="badge" style="background:#fef3c7;color:#92400e;">⏳ Pendiente</span>'
           : '<span class="badge" style="background:var(--danger-bg);color:var(--danger-ink);">✗ Rechazada</span>';
     } else if (r.esExterno) {
-      colContrato = `<button onclick="abrirModalContratoFirmado('${r._key}')" style="padding:4px 10px;background:var(--cartera);color:#fff;border:none;border-radius:var(--r-sm);font-size:var(--fs-xs);font-weight:700;cursor:pointer;">📝 Marcar contrato</button>`;
+      colContrato = (modoAdmin ? `<button onclick="reasignarCierreExterno('${r._key}')" title="Esta venta la cerró alguien del equipo (call center, gerencia)" style="padding:4px 8px;margin-right:4px;background:none;border:1px solid var(--line);border-radius:var(--r-sm);font-size:var(--fs-xs);cursor:pointer;">↪ Equipo</button>` : '') + `<button onclick="abrirModalContratoFirmado('${r._key}')" style="padding:4px 10px;background:var(--cartera);color:#fff;border:none;border-radius:var(--r-sm);font-size:var(--fs-xs);font-weight:700;cursor:pointer;">📝 Marcar contrato</button>`;
     }
     return `<tr${r.esExterno?' style="background:#fdf6e8;"':''}>
       <td class="wrap-ok" style="font-weight:600;max-width:110px;overflow:hidden;text-overflow:ellipsis;" title="${esc(r.nombre||'')}">${esc(r.nombre||'—')}${r.esExterno?' <span class="badge" style="color:#92400e;">🤝</span>':''}</td>

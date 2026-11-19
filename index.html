@@ -46,6 +46,8 @@
   /* ── REGISTROS: guardar bajo planilla/{asesorId}/{key} ── */
   window._fbPushRegistro = (asesorId, data) =>
     push(ref(db, `planilla/${asesorId}`), data);
+  window._fbSetRegistro = (asesorId, key, data) =>
+    set(ref(db, `planilla/${asesorId}/${key}`), data);
 
   window._fbListenRegistros = (asesorId, cb) =>
     onValue(ref(db, `planilla/${asesorId}`), snap => {
@@ -1088,8 +1090,9 @@
     <p style="font-size:var(--fs-sm);color:var(--gris);margin-top:-6px;margin-bottom:16px;">Para ventas que cerró un agente inmobiliario externo por su cuenta, sin pasar por un asesor nuestro. Queda visible en los reportes, pero <strong>no suma a la meta del equipo</strong>.</p>
 
     <div class="form-grid">
+      <div class="form-col-full"><label>¿Quién cerró la venta?</label><select id="ce-quien" onchange="ceCambioQuien()"><option value="externo">Agente inmobiliario externo</option></select></div>
       <div><label>Nombre del cliente</label><input type="text" id="ce-nombre"/></div>
-      <div><label>Nombre del agente externo</label><input type="text" id="ce-agente" placeholder="Quién hizo la venta"/></div>
+      <div id="ce-agente-box"><label>Nombre del agente externo</label><input type="text" id="ce-agente" placeholder="Quién hizo la venta"/></div>
       <div>
         <label>Terreno</label>
         <select id="ce-terreno" onchange="calcularDescuentoCierreExterno()"><option value="">Seleccionar del inventario...</option></select>
@@ -4490,14 +4493,14 @@
 
 
 <!-- Código de la plataforma, por módulo (se cargan en este orden; ?v= se cambia solo en el archivo modificado) -->
-<script src="js/01-base.js?v=202611184"></script>
+<script src="js/01-base.js?v=202611191"></script>
 <script src="js/02-panel-control.js?v=202611184"></script>
 <script src="js/03-ventas-tendencia.js?v=202611184"></script>
 <script src="js/04-ventas-dashboard.js?v=202611184"></script>
-<script src="js/05-documentos.js?v=202611184"></script>
-<script src="js/06-ventas-reportes.js?v=202611184"></script>
+<script src="js/05-documentos.js?v=202611191"></script>
+<script src="js/06-ventas-reportes.js?v=202611191"></script>
 <script src="js/07-inventario.js?v=202611184"></script>
-<script src="js/08-resumen-y-usuarios.js?v=202611184"></script>
+<script src="js/08-resumen-y-usuarios.js?v=202611191"></script>
 <script src="js/09-expensas-analisis.js?v=202611184"></script>
 <script src="js/10-cartera.js?v=202611184"></script>
 <script src="js/11-cobranza-vistas.js?v=202611184"></script>
@@ -4511,7 +4514,7 @@
 <script src="js/19-decisiones-inicio.js?v=202611184"></script>
 <script src="js/20-embudo-crm.js?v=202611184"></script>
 <script src="js/21-rendimiento.js?v=202611184"></script>
-<script src="js/22-parte-semanal.js?v=202611184"></script>
+<script src="js/22-parte-semanal.js?v=202611191"></script>
 <script src="js/23-tco.js?v=202611185"></script>
 <script src="js/24-recordatorios.js?v=202611185"></script>
 <link rel="stylesheet" href="tema.css"/>

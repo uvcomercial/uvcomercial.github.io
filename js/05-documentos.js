@@ -856,6 +856,14 @@ function abrirModalCierreExterno() {
     origenesData.map(o => `<option value="${esc(o.nombre)}" ${o.nombre==='Agente Externo'?'selected':''}>${esc(o.nombre)}</option>`).join('');
 
   ['ce-nombre','ce-agente','ce-precio-venta'].forEach(id => document.getElementById(id).value = '');
+  // ¿Quién cerró? Agente externo, o alguien del equipo que no es asesor (call center, gerencia): ese cierre es interno.
+  const selQ = document.getElementById('ce-quien');
+  if (selQ) {
+    const internos = asesores.filter(a => a.activo !== false && /callcenter|gerencia/.test(a.rol || '')).sort((x, y) => (y.rol === 'callcenter') - (x.rol === 'callcenter'));
+    selQ.innerHTML = '<option value="externo">Agente inmobiliario externo</option>' +
+      internos.map(a => `<option value="${a._key}">${esc(a.nombre)} · ${a.rol === 'callcenter' ? 'Call Center' : 'Gerencia'} (venta interna)</option>`).join('');
+    selQ.value = 'externo'; ceCambioQuien();
+  }
   document.getElementById('ce-fecha').value = new Date().toISOString().split('T')[0];
   document.getElementById('ce-precio-lista-display').value = '';
   document.getElementById('ce-modalidad').value = '';
@@ -863,6 +871,35 @@ function abrirModalCierreExterno() {
   document.getElementById('ce-descuento-info').style.display = 'none';
 
   document.getElementById('modal-cierre-externo').classList.add('open');
+}
+const _cerradoPorDe = a => a?.rol === 'callcenter' ? 'Call Center' : a?.rol === 'gerencia' ? 'Gerencia' : 'Equipo UV';
+
+/* Pasar un cierre cargado como "agente externo" a alguien del equipo (call center, gerencia).
+   Mueve el registro a la planilla de esa persona, conserva todos los datos y deja constancia del cambio. */
+async function reasignarCierreExterno(key) {
+  const r = todosRegs.find(x => x._key === key && x.esExterno);
+  if (!r) return toastErr('No encontré ese cierre externo.');
+  const internos = asesores.filter(a => a.activo !== false && /callcenter|gerencia/.test(a.rol || '')).sort((x, y) => (y.rol === 'callcenter') - (x.rol === 'callcenter'));
+  if (!internos.length) return toastErr('No hay usuarios de Call Center o Gerencia activos.');
+  const opts = internos.map(a => `<option value="${a._key}">${esc(a.nombre)} · ${_cerradoPorDe(a)}</option>`).join('');
+  const ok = await confirmDialog(`<div style="text-align:left">La venta de <b>${esc(r.nombre || '')}</b> (${esc(r.terrenoInteres || '')}) figura como de agente externo${r.agenteExterno ? ' (' + esc(r.agenteExterno) + ')' : ''}. Pasarla a:<br><select id="reasig-quien" style="margin-top:8px;width:100%">${opts}</select><div style="margin-top:8px;font-size:12px;color:var(--gris)">Va a sumar a las ventas del equipo y a la meta.</div></div>`, { title: 'Cambiar quién cerró la venta', okText: 'Cambiar', html: true });
+  if (!ok) return;
+  const dest = asesores.find(a => a._key === (document.getElementById('reasig-quien')?.value || internos[0]._key)) || internos[0];
+  const { _key, _asesorId, ...datos } = r;
+  const nuevo = { ...datos, esExterno: false, asesorNombre: dest.nombre, asesorKey: dest._key, cerradoPor: _cerradoPorDe(dest),
+    reasignado: { de: _asesorId, agenteExterno: r.agenteExterno || '', por: (typeof _cobUsuario === 'function' ? _cobUsuario() : 'Administrador'), ts: Date.now() } };
+  delete nuevo.agenteExterno;
+  try {
+    await window._fbSetRegistro(dest._key, _key, nuevo);
+    await window._fbRemoveRegistro(_asesorId, _key);
+    if (r.terrenoKey) await window._fbUpdateLote(r.terrenoKey, { reservadoPorKey: dest._key, reservadoPorNombre: dest.nombre + ' (' + _cerradoPorDe(dest) + ')' });
+    toastOk('Listo: la venta de ' + (r.nombre || '') + ' quedó a nombre de ' + dest.nombre + ' (' + _cerradoPorDe(dest) + ').');
+  } catch (e) { toastErr('No se pudo cambiar: ' + e.message); }
+}
+
+function ceCambioQuien() {
+  const ext = (document.getElementById('ce-quien')?.value || 'externo') === 'externo';
+  const box = document.getElementById('ce-agente-box'); if (box) box.style.display = ext ? '' : 'none';
 }
 function cerrarModalCierreExterno() {
   document.getElementById('modal-cierre-externo').classList.remove('open');
@@ -899,9 +936,11 @@ async function guardarCierreExterno() {
   const modalidad = document.getElementById('ce-modalidad').value;
   const origen  = document.getElementById('ce-origen').value;
   const calificacion = (document.querySelector('input[name=ceCalificacion]:checked')||{}).value || '';
+  const quien = document.getElementById('ce-quien')?.value || 'externo';
+  const interno = quien !== 'externo' ? asesores.find(a => a._key === quien) : null;
 
   if (!nombre)  { toastErr('Falta el nombre del cliente.'); return; }
-  if (!agente)  { toastErr('Falta el nombre del agente externo.'); return; }
+  if (!interno && !agente)  { toastErr('Falta el nombre del agente externo.'); return; }
   if (!loteKey) { toastErr('Elegí el terreno del inventario.'); return; }
   if (!precioVenta) { toastErr('Falta el precio de venta.'); return; }
 
@@ -919,12 +958,12 @@ async function guardarCierreExterno() {
   const btn = document.querySelector('#modal-cierre-externo .confirm-btn-ok');
   btnLoading(btn, true);
   try {
-    await window._fbPushRegistro('agente_externo', {
+    await window._fbPushRegistro(interno ? interno._key : 'agente_externo', {
       ts: Date.now(),
       fechaCarga: new Date().toLocaleString('es-BO'),
-      esExterno: true,
-      agenteExterno: agente,
-      asesorNombre: '🤝 ' + agente + ' (externo)',
+      esExterno: !interno,
+      ...(interno ? { cerradoPor: _cerradoPorDe(interno), asesorKey: interno._key } : { agenteExterno: agente }),
+      asesorNombre: interno ? interno.nombre : '🤝 ' + agente + ' (externo)',
       nombre, fecha, mes, anio,
       terrenoKey: loteKey,
       terrenoInteres: lote ? _terrenoDeLote(lote) : '',
@@ -932,21 +971,21 @@ async function guardarCierreExterno() {
       descuentoUsd, descuentoPct, precioM2Final,
       formaPago: modalidad, origen, calificacion,
       conclusion: 'Reserva', estado: 'Reserva',
-      comentarios: 'Cierre registrado manualmente — venta directa de agente externo.',
+      comentarios: interno ? 'Cierre registrado manualmente — venta cerrada por ' + interno.nombre + ' (' + _cerradoPorDe(interno) + ').' : 'Cierre registrado manualmente — venta directa de agente externo.',
     });
 
     if (loteKey) {
       await window._fbUpdateLote(loteKey, {
         estado: 'Reservado',
-        reservadoPorKey: 'agente_externo',
-        reservadoPorNombre: agente + ' (agente externo)',
+        reservadoPorKey: interno ? interno._key : 'agente_externo',
+        reservadoPorNombre: interno ? interno.nombre + ' (' + _cerradoPorDe(interno) + ')' : agente + ' (agente externo)',
         precioVenta, precioLista, descuentoUsd, descuentoPct, precioM2Final,
         estadoNegociacion: '', negociadoPorKey: null, negociadoPorNombre: null,
       });
     }
 
     btnSuccess(btn);
-    toastOk('Cierre externo de ' + nombre + ' registrado — no suma a la meta del equipo.');
+    toastOk(interno ? 'Cierre de ' + nombre + ' registrado a nombre de ' + interno.nombre + ' — suma a las ventas del equipo.' : 'Cierre externo de ' + nombre + ' registrado — no suma a la meta del equipo.');
     setTimeout(cerrarModalCierreExterno, 500);
   } catch(e) {
     btnLoading(btn, false);

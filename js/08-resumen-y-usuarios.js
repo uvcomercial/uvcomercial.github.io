@@ -849,12 +849,15 @@ async function agregarCampania() {
   if (!/^[A-Z0-9_-]+$/.test(codigo)) { toastErr('El código solo puede tener letras, números, guion o guion bajo (sin espacios ni acentos).'); return; }
   const yaCod = campaniasData.find(c => _mkpNormCode(c.codigo) === codigo);
   if (yaCod) { toastErr('Ya existe el código ' + codigo + ' (' + yaCod.nombre + ')' + (yaCod.activa === false ? ' — está archivado, reactivalo en vez de crearlo de nuevo.' : '.')); return; }
-  const yaNom = campaniasData.find(c => (c.nombre||'').trim().toLowerCase() === nombre.toLowerCase());
-  if (yaNom) { toastErr('Ya existe una campaña con ese nombre: ' + yaNom.nombre + ' [' + yaNom.codigo + '].'); return; }
+  // Una misma campaña puede tener varios códigos (uno por conjunto de anuncios o semana): el nombre se puede repetir, el código no.
+  if (/^\d{4}-[A-Za-z0-9_-]+$/.test(nombre) && !/\d/.test(codigo)) {
+    toastErr('Parece que el nombre y el código están invertidos: el código va en la casilla corta de la derecha.'); return;
+  }
+  const mismos = campaniasData.filter(c => (c.nombre||'').trim().toLowerCase() === nombre.toLowerCase()).length;
   await window._fbPushCampania({ nombre, codigo });
   document.getElementById('mkt-campania-nombre').value = '';
   document.getElementById('mkt-campania-codigo').value = '';
-  toastOk('Campaña "'+nombre+'" creada.');
+  toastOk('Código ' + codigo + ' creado' + (mismos ? ' (la campaña "' + nombre + '" ya tiene ' + (mismos + 1) + ' códigos)' : ' para la campaña "' + nombre + '"') + '.');
 }
 
 /* ═══════════════════════════════════════════

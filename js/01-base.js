@@ -174,7 +174,8 @@ function confirmDialog(message, opts={}) {
   return new Promise(resolve => {
     _confirmResolver = resolve;
     document.getElementById('confirm-title').textContent = opts.title || '¿Estás seguro?';
-    document.getElementById('confirm-msg').textContent   = message || 'Esta acción no se puede deshacer.';
+    const _cm = document.getElementById('confirm-msg');
+    if (opts.html) _cm.innerHTML = message; else _cm.textContent = message || 'Esta acción no se puede deshacer.';
     const btnOk = document.getElementById('confirm-btn-ok');
     btnOk.textContent = opts.okText || 'Eliminar';
     btnOk.className = 'confirm-btn-ok' + (opts.positive ? ' ok-positive' : '');
@@ -779,18 +780,26 @@ function switchAdminTab(id) {
 /* ═══════════════════════════════════════════
    RADIO PILLS — interactividad
 ═══════════════════════════════════════════ */
-document.addEventListener('change', e => {
-  if (e.target.type !== 'radio') return;
-  const row = e.target.closest('.radio-row');
-  if (!row) return;
-  row.querySelectorAll('.radio-pill').forEach(p => {
-    p.classList.remove('sel-si','sel-no','sel-gen');
-    const inp = p.querySelector('input');
-    if (inp && inp.checked) {
-      p.classList.add(inp.value==='SI' ? 'sel-si' : 'sel-no');
-    }
+function pillsSync(root) {
+  (root || document).querySelectorAll('.radio-row').forEach(row => {
+    row.querySelectorAll('.radio-pill').forEach(p => {
+      const inp = p.querySelector('input');
+      p.classList.remove('sel-si','sel-no','sel-gen');
+      if (inp && inp.checked) p.classList.add(inp.value === 'SI' ? 'sel-si' : inp.value === 'NO' ? 'sel-no' : 'sel-gen');
+    });
   });
+}
+document.addEventListener('change', e => { if (e.target.type === 'radio' && e.target.closest('.radio-row')) pillsSync(e.target.closest('.radio-row').parentElement); });
+// clic en una pastilla: marca su opción aunque ya estuviera elegida (antes había que tocar otra y volver)
+document.addEventListener('click', e => {
+  const p = e.target.closest && e.target.closest('.radio-pill'); if (!p) return;
+  const inp = p.querySelector('input[type=radio]'); if (!inp) return;
+  if (!inp.checked) { inp.checked = true; inp.dispatchEvent(new Event('change', { bubbles: true })); }
+  setTimeout(() => pillsSync(p.closest('.radio-row').parentElement), 0);
 });
+// cuando el formulario se completa por código (editar un registro, valores por defecto) también se pinta
+document.addEventListener('focusin', e => { if (e.target.closest && e.target.closest('.form-section, .form-grid')) pillsSync(e.target.closest('form, .tab-content, .confirm-box, body')); }, true);
+setInterval(() => { const f = document.querySelector('.radio-row'); if (f && f.offsetParent) pillsSync(); }, 1500);
 
 function poblarSugerenciasClientes() {
   const dl = document.getElementById('f-nombre-sugerencias');
