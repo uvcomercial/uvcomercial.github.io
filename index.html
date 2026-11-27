@@ -701,6 +701,7 @@
 <link rel="stylesheet" href="css/cerebro.css?v=202611184"/>
 <link rel="stylesheet" href="css/dec.css?v=202611184"/>
 <link rel="stylesheet" href="css/tco-recordatorios.css?v=202611185"/>
+<link rel="stylesheet" href="css/ventas-gestion.css?v=202611271"/>
 </head>
 <body>
 
@@ -1877,6 +1878,9 @@
         <button class="nav-item" id="nav-dashboard" onclick="switchAdminTab('dashboard')">
           <span class="nav-icon">📊</span> Ventas
         </button>
+        <button class="nav-item" id="nav-ventas-gestion" onclick="switchAdminTab('ventas-gestion')">
+          <span class="nav-icon">📈</span> Ventas gestión
+        </button>
         <button class="nav-item" id="nav-contratos" onclick="switchAdminTab('contratos')">
           <span class="nav-icon">📜</span> Ventas Concretadas <span id="nav-contratos-badge" style="display:none;margin-left:auto;background:var(--warn);color:#0a0f0c;font-size:10px;font-weight:700;border-radius:999px;min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 4px;">0</span>
         </button>
@@ -2494,6 +2498,9 @@
     </div><!-- /panel-marketing-admin -->
 
     <!-- TAB: Dashboard Ventas -->
+    <!-- VENTAS GESTIÓN (js/25-ventas-gestion.js) -->
+    <div class="tab-panel" id="panel-ventas-gestion"><div id="vg-root" class="vg"></div></div>
+
     <div class="tab-panel" id="panel-dashboard">
 
       <!-- Filtro global — cambia esto y se actualiza TODO el panel de abajo -->
@@ -4517,6 +4524,7 @@
 <script src="js/22-parte-semanal.js?v=202611191"></script>
 <script src="js/23-tco.js?v=202611185"></script>
 <script src="js/24-recordatorios.js?v=202611185"></script>
+<script src="js/25-ventas-gestion.js?v=202611271"></script>
 <link rel="stylesheet" href="tema.css"/>
 </body>
 </html>
